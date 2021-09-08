@@ -10,12 +10,10 @@ var viewportQuadTexBuffer
 
 var particleFBO;
 var particleFBOTexture;
-var MotionMap;
-var MotionMapTexture;
 var cubeRotation = 0.0;
 var lastUpdateTime;
 var deltaTime;
-var ptCount_sqre = 256.0; //重要關鍵，FBO的有特定尺寸，256/512/1024 !!
+var ptCount_sqre = 256.0;
 
 var cubeImage;
 var cubeTexture;
@@ -47,7 +45,6 @@ function start() {
     // we'll be drawing.
     initBuffers();
     initFBO();
-    initMotionMap();
 
     // Next, load and set up the textures we'll be using.
     initTextures();
@@ -56,11 +53,6 @@ function start() {
     // vertices and so forth is established.
     initPhysicsShaders();
     initRenderShaders();
-
-    //滑鼠機制    
-    canvas.onmousedown = handleMouseDown;
-    document.onmouseup = handleMouseUp;
-    document.onmousemove = handleMouseMove;
 
     // Set up to draw the scene periodically.
     setInterval(drawScene, 15);
@@ -102,10 +94,9 @@ function initBuffers() {
   var particleCol=[];
   var particleTex=[];
   
-  // ii, jj 若由0.0開始，有瑕疵
-  for(var jj=0.01; jj<ptCount_sqre; jj++)
+  for(var jj=0.0; jj<ptCount_sqre; jj++)
   {
-    for(var ii=0.01; ii<ptCount_sqre; ii++)
+    for(var ii=0.0; ii<ptCount_sqre; ii++)
     {
       particlePos.push(ii/ptCount_sqre, jj/ptCount_sqre, 0.0);
       particleCol.push(ii/ptCount_sqre, jj/ptCount_sqre, 1.0, 1.0);
@@ -185,19 +176,10 @@ function initFBO() {
   gl.activeTexture(gl.TEXTURE0 + particleFBOTexture.unit);//是否在初始階段，需要active? 後面需要再啓動
   gl.bindTexture(gl.TEXTURE_2D, particleFBOTexture);
   
-  //option1_建立texture後沒有置入image或array，需指定尺寸width*height
+  //建立texture後沒有置入image或array，需指定尺寸width*height
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, ptCount_sqre, ptCount_sqre, 0, 
-                  gl.RGBA, gl.UNSIGNED_BYTE, null);       //gl.UNSIGNED_BYTE, gl.FLOAT
-  //option2_也可隨意給張貼圖，代替指定FBO影像尺寸 !! 
-  //gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, ptCount_sqre, ptCount_sqre, 0, 
-  //                gl.RGBA, gl.UNSIGNED_BYTE, cubeImage);    //gl.UNSIGNED_BYTE, gl.FLOAT
+    	            gl.RGBA, gl.UNSIGNED_BYTE, null);
   
-  //需指定圖檔重覆及取樣模式
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);//gl.CLAMP_TO_EDGE, gl.REPEAT (default)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);//gl.CLAMP_TO_EDGE, gl.REPEAT (default)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);//gl.LINEAR, gl.NEAREST, gl.LINEAR_MIPMAP_NEAREST
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); //不能使用gl.LINEAR_MIPMAP_NEAREST
-
   //create a framebuffer
   particleFBO= gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, particleFBO);
@@ -205,37 +187,6 @@ function initFBO() {
   //attache the texture to it
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, 
                   particleFBOTexture, 0);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-}
-
-function initMotionMap() {
-  
-  //create a texture for framebuffer
-  MotionMapTexture = gl.createTexture();
-  MotionMapTexture.unit = 2;  //???
-  gl.activeTexture(gl.TEXTURE0 + MotionMapTexture.unit);//是否在初始階段，需要active? 後面需要再啓動
-  gl.bindTexture(gl.TEXTURE_2D, MotionMapTexture);
-  
-  //option1_建立texture後沒有置入image或array，需指定尺寸width*height
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, ptCount_sqre, ptCount_sqre, 0, 
-                  gl.RGBA, gl.UNSIGNED_BYTE, null);       //gl.UNSIGNED_BYTE, gl.FLOAT
-  //option2_也可隨意給張貼圖，代替指定FBO影像尺寸 !! 
-  //gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, ptCount_sqre, ptCount_sqre, 0, 
-  //                gl.RGBA, gl.UNSIGNED_BYTE, cubeImage);    //gl.UNSIGNED_BYTE, gl.FLOAT
-  
-  //需指定圖檔重覆及取樣模式
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);//gl.CLAMP_TO_EDGE, gl.REPEAT (default)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);//gl.CLAMP_TO_EDGE, gl.REPEAT (default)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);//gl.LINEAR, gl.NEAREST, gl.LINEAR_MIPMAP_NEAREST
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); //不能使用gl.LINEAR_MIPMAP_NEAREST
-
-  //create a framebuffer
-  MotionMap= gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, MotionMap);
-  
-  //attache the texture to it
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, 
-                  MotionMapTexture, 0);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
@@ -252,7 +203,7 @@ function initTextures() {
   gl.activeTexture(gl.TEXTURE0+cubeTexture.unit);//是否在初始階段，需要active?
   cubeImage = new Image();
   cubeImage.onload = function() { handleTextureLoaded(cubeImage, cubeTexture); }
-  cubeImage.src = "MotionMap00.png";
+  cubeImage.src = "rgb-perlin-seamless-512.png";
 }
 
 function handleTextureLoaded(image, texture) {
@@ -293,10 +244,14 @@ function initPhysicsShaders() {
   physicsProgram.aTextureCoordLoc = gl.getAttribLocation(physicsProgram, "aTextureCoord");//var?
   gl.enableVertexAttribArray(physicsProgram.aTextureCoordLoc);
   
+  //physicsProgram.uParticleDataLoc = gl.getUniformLocation(physicsProgram, "uParticleData");
+  //gl.uniformi(physicsProgram.uParticleDataLoc, 0);//????
+  //physicsProgram.uPerlinDataLoc = gl.getUniformLocation(physicsProgram, "uPerlinData");
+  //gl.uniformi(physicsProgram.uPerlinDataLoc, 1);//????
+
   gl.useProgram(physicsProgram);
   gl.uniform1i(gl.getUniformLocation(physicsProgram, "uParticleData"), 0);//考慮移至init或drawscene
   gl.uniform1i(gl.getUniformLocation(physicsProgram, "uPerlinData"), 1);//考慮移至init或drawscene
-  gl.uniform1i(gl.getUniformLocation(physicsProgram, "uMotionMap"), 2);//考慮移至init或drawscene
 }
 
 function initRenderShaders() {
@@ -319,6 +274,7 @@ function initRenderShaders() {
   shaderProgram.aVertexColorLoc = gl.getAttribLocation(shaderProgram, "aVertexColor");
   gl.enableVertexAttribArray(shaderProgram.aVertexColorLoc);
   
+  //奇怪，ONOFF竟然都不影響
   gl.useProgram(shaderProgram);
   gl.uniform1i(gl.getUniformLocation(shaderProgram, "uParticleData"), 0);//考慮移至init或drawscene    
   //gl.uniform1i(gl.getUniformLocation(shaderProgram, "uSampler"), 1);//考慮移至init或drawscene
@@ -355,7 +311,7 @@ function drawScene() {
   // Save the current matrix, then rotate before we draw.
 
   mvPushMatrix();
-  mvRotate(cubeRotation, [0, 1, 0]);
+  mvRotate(cubeRotation, [0, 0, 1]);
 
   ///////////////// I Physics step /////////////////////////////////////////////
   
@@ -363,40 +319,36 @@ function drawScene() {
     gl.viewport(0, 0, ptCount_sqre, ptCount_sqre);
     gl.useProgram(physicsProgram);
     
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesTextureCoordBuffer); //viewportQuadTexBuffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, viewportQuadTexBuffer); // cubeVerticesTextureCoordBuffer
     gl.vertexAttribPointer(physicsProgram.aTextureCoordLoc, 2, gl.FLOAT, false, 0, 0);    //important
     
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesBuffer); //viewportQuadBuffer 
+    gl.bindBuffer(gl.ARRAY_BUFFER, viewportQuadBuffer); // cubeVerticesBuffer
     gl.vertexAttribPointer(physicsProgram.aVertexPositionLoc, 3, gl.FLOAT, false, 0, 0);
 
     gl.uniform1f( gl.getUniformLocation(physicsProgram, "uTime"), (0.0001*lastUpdateTime)%1.0 );
     gl.uniform1f( gl.getUniformLocation(physicsProgram, "udTime"), deltaTime);
     
-    //已經成功寫入FBO，需注意FBO尺寸
-    //順序重要---------------------
-    gl.activeTexture(gl.TEXTURE1);//???會干擾gl.activeTexture(gl.TEXTURE0)，Init之前已成功啓動
+    //不確定是否成功寫入FBO?
+    //順序重要---搞不清楚---------------------
+    //gl.activeTexture(gl.TEXTURE1);//???會干擾gl.activeTexture(gl.TEXTURE0)，Init之前已成功啓動
     gl.bindTexture(gl.TEXTURE_2D, cubeTexture);//重要，需啓動才能讀圖檔資料，因為InitTexture un-bind 
     
-    gl.activeTexture(gl.TEXTURE2);//???會干擾gl.activeTexture(gl.TEXTURE0)，Init之前已成功啓動
-    gl.bindTexture(gl.TEXTURE_2D, MotionMapTexture);//重要，需啓動才能讀圖檔資料，因為InitTexture un-bind 
-
     gl.activeTexture(gl.TEXTURE0);//重要，若physicsProgram中有讀取則需啓動
-    gl.bindTexture(gl.TEXTURE_2D, particleFBOTexture);//奇怪，導致FBO無法使用，避免重覆InitFBO
-    //----------------------------
+    //gl.bindTexture(gl.TEXTURE_2D, particleFBOTexture);//奇怪，導致FBO無法使用，避免重覆InitFBO
+    //--------------------------------------
     
     // Tell WebGL to use the particle FBO, not the front buffer for (offscreen) rendering
     gl.bindFramebuffer(gl.FRAMEBUFFER, particleFBO);  // draw to framebuffer
-    gl.drawArrays( gl.POINTS, 0, (ptCount_sqre*ptCount_sqre));//是否有作用？
-    //gl.drawArrays( gl.TRIANGLE_STRIP, 0, 4);//是否有作用？
+    //gl.drawArrays( gl.POINTS, 0, (ptCount_sqre*ptCount_sqre));//究竟是否有作用？
+    gl.drawArrays( gl.TRIANGLE_STRIP, 0, 4);//究竟是否有作用？
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.drawArrays( gl.POINTS, 0, (ptCount_sqre*ptCount_sqre));//是否有作用？
-    //gl.drawArrays( gl.TRIANGLE_STRIP, 0, 4);
+    gl.drawArrays( gl.TRIANGLE_STRIP, 0, 4);
     
 
     
   ///////////////// II Render step /////////////////////////////////////////////
 
-  //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.useProgram(shaderProgram);
   
@@ -433,15 +385,15 @@ function drawScene() {
   var currentTime = (new Date).getTime();
   if (lastUpdateTime) {
     deltaTime = currentTime - lastUpdateTime;
-    //cubeRotation += (30 * deltaTime) / 1000.0;
-    //cubeRotation = 0.0;
+
+    //cubeRotation += (30 * delta) / 1000.0;
+    cubeRotation = 0.0;
   }
 
   lastUpdateTime = currentTime;
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
 //
 // getShader
 //
@@ -502,7 +454,6 @@ function getShader(gl, id) {
   return shader;
 }
 
-////////////////////////////////////////////////////////////////////////////////
 //
 // Matrix utility functions
 //
@@ -529,7 +480,7 @@ function setMatrixUniforms() {
 
 function setTimeUniforms() {
   var timeUniform = gl.getUniformLocation(shaderProgram, "uTime");
-  gl.uniform1f( timeUniform, (0.001*lastUpdateTime)%10.0 );
+  gl.uniform1f( timeUniform, (0.0001*lastUpdateTime)%1.0 );
   var dtimeUniform = gl.getUniformLocation(shaderProgram, "udTime");
   gl.uniform1f( dtimeUniform, deltaTime);
 }
@@ -559,46 +510,3 @@ function mvRotate(angle, v) {
   var m = Matrix.Rotation(inRadians, $V([v[0], v[1], v[2]])).ensure4x4();
   multMatrix(m);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//
-//滑鼠機制
-//
-function degToRad(degrees) {
-        return degrees * Math.PI / 180.0;
-}
-    var mouseDown = false;
-    var lastMouseX = null;
-    var lastMouseY = null;
-
-    function handleMouseDown(event) {
-        mouseDown = true;
-        lastMouseX = event.clientX;
-        lastMouseY = event.clientY;
-    }
-
-    function handleMouseUp(event) {
-        mouseDown = false;
-    }
-
-    function handleMouseMove(event) {
-        //滑鼠按下時才作用
-        if (!mouseDown) {
-            return;
-        }        
-        var newX = event.clientX;
-        var newY = event.clientY;
-
-        var deltaX = newX - lastMouseX
-        //var newRotationMatrix = mat4.create();
-        //mat4.identity(newRotationMatrix);
-        //mat4.rotate(newRotationMatrix, degToRad(deltaX / 10), [0, 1, 0]);
-        cubeRotation +=  deltaX*0.5;
-        
-        var deltaY = newY - lastMouseY;
-        //mat4.rotate(newRotationMatrix, degToRad(deltaY / 10), [1, 0, 0]);
-        //mat4.multiply(newRotationMatrix, moonRotationMatrix, moonRotationMatrix);
-
-        lastMouseX = newX
-        lastMouseY = newY;
-    }
