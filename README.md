@@ -3,3 +3,4 @@
 2. https://thebookofshaders.com/
 3. https://www.shadertoy.com/
 4. https://iquilezles.org/
+5. http://evasion.imag.fr/~Fabrice.Neyret/demos/Shadertoy/
